@@ -157,7 +157,7 @@ func(r *Rabbit) ConsumeMessages(ctx context.Context,key string) (chan string,err
 	return resCh,nil
 }
 
-func(r *Rabbit) DeleteMessage(ctx context.Context,id,key string) (error) {
+func(r *Rabbit) DeleteMessage(ctx context.Context,id []byte,key string) (error) {
 	ch,err := r.rClient.Channel()
 	if err != nil {
 		return err
@@ -188,7 +188,7 @@ func(r *Rabbit) DeleteMessage(ctx context.Context,id,key string) (error) {
 					if first == nil{
 						first = msg.Body		
 					}
-					if string(msg.Body) == id{
+					if msg.Body == id{
 						msg.Ack(true)	
 					}		
 					msg.Nack(false,true)
