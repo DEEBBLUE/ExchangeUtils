@@ -188,7 +188,7 @@ func(r *Rabbit) DeleteMessage(ctx context.Context,id []byte,key string) (error) 
 					if first == nil{
 						first = msg.Body		
 					}
-					if msg.Body == id{
+					if bytes.Equal(msg.Body,id){
 						msg.Ack(true)	
 					}		
 					msg.Nack(false,true)
