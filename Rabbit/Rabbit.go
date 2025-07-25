@@ -26,7 +26,7 @@ func CreateRabbit(rConn *amqp.Connection) Rabbit{
 	if err := rabbit.CreateEchanger(ch);err !=nil {
 		panic(fmt.Errorf("Error when create Exchanger %w",err))
 	}
-	if err := rabbit.CreateQueues(ch,"RC","CR","CRRC","Confirmed");err != nil{
+	if err := rabbit.CreateQueues(ch,"RC","CreatedRC","CreatedCR","CR","CRRC","Confirmed");err != nil{
 		panic(fmt.Errorf("Error when create Queue %w",err))
 	}
 	if err := rabbit.BindQueues(ch);err != nil{
