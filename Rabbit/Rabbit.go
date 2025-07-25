@@ -78,7 +78,7 @@ func(r *Rabbit) BindQueues(ch *amqp.Channel) (error){
 	return nil
 }
 
-func(r *Rabbit) PublishMessage(ctx context.Context,msg string,key string) (error){
+func(r *Rabbit) PublishMessage(ctx context.Context,msg []byte,key string) (error){
 	ch,err := r.rClient.Channel()
 	if err != nil {
 		return err
@@ -92,7 +92,7 @@ func(r *Rabbit) PublishMessage(ctx context.Context,msg string,key string) (error
 		false,
 		amqp.Publishing{
 			ContentType:     "text/plain",
-			Body:            []byte(msg),
+			Body:            msg,
 			DeliveryMode:    amqp.Persistent, // 1=non-persistent, 2=persistent
 		},
 	);err != nil{
