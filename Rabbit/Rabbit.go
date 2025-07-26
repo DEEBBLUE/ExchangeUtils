@@ -23,7 +23,7 @@ func CreateRabbit(rConn *amqp.Connection,exchanger string,queueNames ...string) 
 	}
 	defer ch.Close()
 
-	if err := rabbit.CreateEchanger(ch);err !=nil {
+	if err := rabbit.CreateEchanger(ch,exchanger);err !=nil {
 		panic(fmt.Errorf("Error when create Exchanger %w",err))
 	}
 	if err := rabbit.CreateQueues(ch,queueNames...);err != nil{
