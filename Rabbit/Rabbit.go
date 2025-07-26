@@ -15,7 +15,7 @@ type Rabbit struct{
 	QueueNames 		[]string
 }
 
-func CreateRabbit(rConn *amqp.Connection) Rabbit{
+func CreateRabbit(rConn *amqp.Connection,exchanger string,queueNames ...string) Rabbit{
 	rabbit := Rabbit{rClient: rConn}
 	ch,err := rConn.Channel()
 	if err != nil {
@@ -26,7 +26,7 @@ func CreateRabbit(rConn *amqp.Connection) Rabbit{
 	if err := rabbit.CreateEchanger(ch);err !=nil {
 		panic(fmt.Errorf("Error when create Exchanger %w",err))
 	}
-	if err := rabbit.CreateQueues(ch,"RC","CreatedCR","CR","CRRC","Confirmed");err != nil{
+	if err := rabbit.CreateQueues(ch,queueNames...);err != nil{
 		panic(fmt.Errorf("Error when create Queue %w",err))
 	}
 	if err := rabbit.BindQueues(ch);err != nil{
@@ -36,9 +36,9 @@ func CreateRabbit(rConn *amqp.Connection) Rabbit{
 	return rabbit
 }
 
-func(r *Rabbit) CreateEchanger(ch *amqp.Channel) (error){
+func(r *Rabbit) CreateEchanger(ch *amqp.Channel,exchanger string) (error){
 	if err := ch.ExchangeDeclare(
-						"exchanger",
+						exchanger,
 						"direct",
 						true,
 						false,        
@@ -49,7 +49,7 @@ func(r *Rabbit) CreateEchanger(ch *amqp.Channel) (error){
 		return err
 	}
 
-	r.ExchangerName = "exchanger"
+	r.ExchangerName = exchanger 
 	return nil
 }
 func(r *Rabbit) CreateQueues(ch *amqp.Channel,queueNames ...string) (error){
