@@ -78,13 +78,7 @@ func(r *Rabbit) BindQueues(ch *amqp.Channel) (error){
 	return nil
 }
 
-func(r *Rabbit) PublishMessage(ctx context.Context,msg []byte,key string) (error){
-	ch,err := r.rClient.Channel()
-	if err != nil {
-		return err
-	}
-	defer ch.Close()
-
+func(r *Rabbit) PublishMessage(ctx context.Context,msg []byte,key string,ch *amqp.Channel) (error){
 	if err := ch.PublishWithContext(ctx,
 		r.ExchangerName,
 		key,
@@ -99,6 +93,36 @@ func(r *Rabbit) PublishMessage(ctx context.Context,msg []byte,key string) (error
 		return err
 	}
 
+	return nil
+}
+
+func(r *Rabbit) PublishMessageWithTx(ctx context.Context,msg []byte,key string,resCh <-chan bool) (error){
+	ch,err := r.rClient.Channel()
+	if err != nil {
+		return err
+	}
+	if err = ch.Tx();err != nil {
+		ch.Close()
+		return err
+	}
+
+	r.PublishMessage(ctx,msg,key,ch)
+	select{
+		case <-ctx.Done():
+			if err = ch.TxRollback();err != nil{
+				return err
+			}
+		case res := <-resCh:
+			if res {
+				if err = ch.TxCommit();err != nil{
+					return err
+				}
+			}else{
+				if err = ch.TxRollback();err != nil{
+					return err
+				}
+			}
+	}
 	return nil
 }
 
@@ -157,16 +181,10 @@ func(r *Rabbit) ConsumeMessages(ctx context.Context,key string) (chan string,err
 	return resCh,nil
 }
 
-func(r *Rabbit) DeleteMessage(ctx context.Context,id []byte,key string) (error) {
-	ch,err := r.rClient.Channel()
-	if err != nil {
-		return err
-	}
-	defer ch.Close()
-	
+func(r *Rabbit) DeleteMessage(ctx context.Context,id []byte,key string,ch *amqp.Channel) (error) {
 	list,err := ch.ConsumeWithContext(ctx,
 		key,
-		"exchanger",
+		r.ExchangerName,
 		false,
 		false,      
 		false,      
@@ -198,5 +216,36 @@ func(r *Rabbit) DeleteMessage(ctx context.Context,id []byte,key string) (error) 
 			}
 		}
 	}()
+	return nil
+}
+
+
+func(r *Rabbit) DeleteMessageWithTx(ctx context.Context,id []byte,key string,resCh <-chan bool) (error) {
+	ch,err := r.rClient.Channel()
+	if err != nil {
+		return err
+	}
+	if err = ch.Tx();err != nil {
+		ch.Close()
+		return err
+	}
+
+	r.DeleteMessage(ctx,id,key,ch)
+	select{
+		case <-ctx.Done():
+			if err = ch.TxRollback();err != nil{
+				return err
+			}
+		case res := <-resCh:
+			if res {
+				if err = ch.TxCommit();err != nil{
+					return err
+				}
+			}else{
+				if err = ch.TxRollback();err != nil{
+					return err
+				}
+			}
+	}
 	return nil
 }
