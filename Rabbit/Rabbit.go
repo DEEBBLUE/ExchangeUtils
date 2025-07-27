@@ -78,7 +78,11 @@ func(r *Rabbit) BindQueues(ch *amqp.Channel) (error){
 	return nil
 }
 
-func(r *Rabbit) PublishMessage(ctx context.Context,msg []byte,key string,ch *amqp.Channel) (error){
+func(r *Rabbit) PublishMessage(ctx context.Context,msg []byte,key string) (error){
+	ch,err := r.rClient.Channel()
+	if err != nil {
+		return err
+	}
 	if err := ch.PublishWithContext(ctx,
 		r.ExchangerName,
 		key,
@@ -93,48 +97,6 @@ func(r *Rabbit) PublishMessage(ctx context.Context,msg []byte,key string,ch *amq
 		return err
 	}
 
-	return nil
-}
-
-func(r *Rabbit) PublishMessageWithTx(ctx context.Context,msg []byte,key string,resCh <-chan bool) (error){
-	ch,err := r.rClient.Channel()
-	if err != nil {
-		return err
-	}
-	if err = ch.Tx();err != nil {
-		ch.Close()
-		return err
-	}
-
-	r.PublishMessage(ctx,msg,key,ch)
-	go func ()  {
-		select{
-			case <-ctx.Done():
-				slog.Info("Ctx done")
-				if err = ch.TxRollback();err != nil{
-					slog.Error(fmt.Sprint(err))
-				}
-			case res,ok := <-resCh:
-				slog.Info("Get a res")
-				if !ok{
-					if err = ch.TxRollback();err != nil{
-						slog.Error(fmt.Sprint(err))
-					}
-					return 
-				}
-				if res {
-					slog.Info("Publish msg")
-					if err = ch.TxCommit();err != nil{
-						slog.Error(fmt.Sprint(err))
-					}
-				}else{
-					slog.Info("Publish Rollback")
-					if err = ch.TxRollback();err != nil{
-						slog.Error(fmt.Sprint(err))
-					}
-				}
-		}
-	}()
 	return nil
 }
 
@@ -193,7 +155,11 @@ func(r *Rabbit) ConsumeMessages(ctx context.Context,key string) (chan string,err
 	return resCh,nil
 }
 
-func(r *Rabbit) DeleteMessage(ctx context.Context,id []byte,key string,ch *amqp.Channel) (error) {
+func(r *Rabbit) DeleteMessage(ctx context.Context,id []byte,key string) (error) {
+	ch,err := r.rClient.Channel()
+	if err != nil {
+		return err
+	}
 	list,err := ch.ConsumeWithContext(ctx,
 		key,
 		r.ExchangerName,
@@ -228,44 +194,5 @@ func(r *Rabbit) DeleteMessage(ctx context.Context,id []byte,key string,ch *amqp.
 			}
 		}
 	}()
-	return nil
-}
-
-
-func(r *Rabbit) DeleteMessageWithTx(ctx context.Context,id []byte,key string,resCh <-chan bool) (error) {
-	ch,err := r.rClient.Channel()
-	if err != nil {
-		return err
-	}
-	if err = ch.Tx();err != nil {
-		ch.Close()
-		return err
-	}
-
-	r.DeleteMessage(ctx,id,key,ch)
-	go func ()  {
-		select{
-			case <-ctx.Done():
-				if err = ch.TxRollback();err != nil{
-					slog.Error(fmt.Sprint(err))
-				}
-			case res,ok := <-resCh:
-				if !ok{
-					if err = ch.TxRollback();err != nil{
-						slog.Error(fmt.Sprint(err))
-					}
-				}
-				if res {
-					if err = ch.TxCommit();err != nil{
-						slog.Error(fmt.Sprint(err))
-					}
-				}else{
-					if err = ch.TxRollback();err != nil{
-						slog.Error(fmt.Sprint(err))
-					}
-				}
-		}
-	}()
-
 	return nil
 }
