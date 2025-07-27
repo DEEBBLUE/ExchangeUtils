@@ -17,8 +17,10 @@ func CreateTee[T any](mainCh chan T, amount int) ([]chan T,error){
 				wg.Add(1)
 				go func ()  {
 					list[i] <- val
+					wg.Done()
 				}()
 			}		
+			wg.Wait()
 		}	
 	}()
 	return list,nil
