@@ -107,22 +107,24 @@ func(r *Rabbit) PublishMessageWithTx(ctx context.Context,msg []byte,key string,r
 	}
 
 	r.PublishMessage(ctx,msg,key,ch)
-	select{
-		case <-ctx.Done():
-			if err = ch.TxRollback();err != nil{
-				return err
-			}
-		case res := <-resCh:
-			if res {
-				if err = ch.TxCommit();err != nil{
-					return err
-				}
-			}else{
+	go func ()  {
+		select{
+			case <-ctx.Done():
 				if err = ch.TxRollback();err != nil{
-					return err
+					slog.Error(fmt.Sprint(err))
 				}
-			}
-	}
+			case res := <-resCh:
+				if res {
+					if err = ch.TxCommit();err != nil{
+						slog.Error(fmt.Sprint(err))
+					}
+				}else{
+					if err = ch.TxRollback();err != nil{
+						slog.Error(fmt.Sprint(err))
+					}
+				}
+		}
+	}()
 	return nil
 }
 
@@ -231,21 +233,24 @@ func(r *Rabbit) DeleteMessageWithTx(ctx context.Context,id []byte,key string,res
 	}
 
 	r.DeleteMessage(ctx,id,key,ch)
-	select{
-		case <-ctx.Done():
-			if err = ch.TxRollback();err != nil{
-				return err
-			}
-		case res := <-resCh:
-			if res {
-				if err = ch.TxCommit();err != nil{
-					return err
-				}
-			}else{
+	go func ()  {
+		select{
+			case <-ctx.Done():
 				if err = ch.TxRollback();err != nil{
-					return err
+					slog.Error(fmt.Sprint(err))
 				}
-			}
-	}
+			case res := <-resCh:
+				if res {
+					if err = ch.TxCommit();err != nil{
+						slog.Error(fmt.Sprint(err))
+					}
+				}else{
+					if err = ch.TxRollback();err != nil{
+						slog.Error(fmt.Sprint(err))
+					}
+				}
+		}
+	}()
+
 	return nil
 }
