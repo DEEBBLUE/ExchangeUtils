@@ -113,7 +113,13 @@ func(r *Rabbit) PublishMessageWithTx(ctx context.Context,msg []byte,key string,r
 				if err = ch.TxRollback();err != nil{
 					slog.Error(fmt.Sprint(err))
 				}
-			case res := <-resCh:
+			case res,ok := <-resCh:
+				if !ok{
+					if err = ch.TxCommit();err != nil{
+						slog.Error(fmt.Sprint(err))
+					}
+					return 
+				}
 				if res {
 					if err = ch.TxCommit();err != nil{
 						slog.Error(fmt.Sprint(err))
@@ -239,7 +245,12 @@ func(r *Rabbit) DeleteMessageWithTx(ctx context.Context,id []byte,key string,res
 				if err = ch.TxRollback();err != nil{
 					slog.Error(fmt.Sprint(err))
 				}
-			case res := <-resCh:
+			case res,ok := <-resCh:
+				if !ok{
+					if err = ch.TxRollback();err != nil{
+						slog.Error(fmt.Sprint(err))
+					}
+				}
 				if res {
 					if err = ch.TxCommit();err != nil{
 						slog.Error(fmt.Sprint(err))
