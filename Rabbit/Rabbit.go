@@ -110,21 +110,25 @@ func(r *Rabbit) PublishMessageWithTx(ctx context.Context,msg []byte,key string,r
 	go func ()  {
 		select{
 			case <-ctx.Done():
+				slog.Info("Ctx done")
 				if err = ch.TxRollback();err != nil{
 					slog.Error(fmt.Sprint(err))
 				}
 			case res,ok := <-resCh:
+				slog.Info("Get a res")
 				if !ok{
-					if err = ch.TxCommit();err != nil{
+					if err = ch.TxRollback();err != nil{
 						slog.Error(fmt.Sprint(err))
 					}
 					return 
 				}
 				if res {
+					slog.Info("Publish msg")
 					if err = ch.TxCommit();err != nil{
 						slog.Error(fmt.Sprint(err))
 					}
 				}else{
+					slog.Info("Publish Rollback")
 					if err = ch.TxRollback();err != nil{
 						slog.Error(fmt.Sprint(err))
 					}
