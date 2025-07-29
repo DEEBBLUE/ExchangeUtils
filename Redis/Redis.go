@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"strconv"
 
 	"github.com/DEEBBLUE/ExProtos/api/Types"
 	red "github.com/redis/go-redis/v9"
@@ -56,9 +57,13 @@ func(redis *Redis) GetExchange(ctx context.Context,key string) (Models.Exchange,
 		return res,err
 	}
 
-	
-
 	if err := res.CreateFromJson(bytesData);err != nil{
+		slog.Error(fmt.Sprint("Error in convert data",err))
+		return res,err
+	}
+
+	res.ExchangeId,err = strconv.Atoi(key)
+	if err != nil {
 		slog.Error(fmt.Sprint("Error in convert data",err))
 		return res,err
 	}
