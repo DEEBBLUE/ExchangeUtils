@@ -2,7 +2,6 @@ package redis
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log/slog"
 
@@ -29,7 +28,8 @@ func(redis *Redis) SetExchange(ctx context.Context,key string,exchange *Types.Ex
 
 	ex.CreateFromGRPC(exchange)
 	data,err := ex.CreateJson()
-
+	fmt.Println(key)
+		
 	if err != nil {
 		return err
 	}
@@ -58,7 +58,9 @@ func(redis *Redis) GetExchange(ctx context.Context,key string) (Models.Exchange,
 		return res,err
 	}
 
-	if err := json.Unmarshal(bytesData,&res);err != nil{
+	
+
+	if err := res.CreateFromJson(bytesData);err != nil{
 		slog.Error(fmt.Sprint("Error in convert data",err))
 		return res,err
 	}
