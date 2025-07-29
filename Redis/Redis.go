@@ -28,7 +28,6 @@ func(redis *Redis) SetExchange(ctx context.Context,key string,exchange *Types.Ex
 
 	ex.CreateFromGRPC(exchange)
 	data,err := ex.CreateJson()
-	fmt.Println(key)
 		
 	if err != nil {
 		return err
@@ -43,7 +42,6 @@ func(redis *Redis) SetExchange(ctx context.Context,key string,exchange *Types.Ex
 
 func(redis *Redis) GetExchange(ctx context.Context,key string) (Models.Exchange,error){
 	var res Models.Exchange
-	fmt.Println(key)
 
 	data := redis.redClient.Get(ctx,key)
 	
