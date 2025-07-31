@@ -52,7 +52,6 @@ func(r *Rabbit) CreateEchanger(ch *amqp.Channel,exchanger string) (error){
 	r.ExchangerName = exchanger 
 	return nil
 }
-
 func(r *Rabbit) CreateQueues(ch *amqp.Channel,queueNames ...string) (error){
 	for _,name := range queueNames{
 		if _,err := ch.QueueDeclare(
@@ -101,7 +100,8 @@ func(r *Rabbit) PublishMessage(ctx context.Context,msg []byte,key string) (error
 	return nil
 }
 
-func(r *Rabbit) ConsumeMessages(ctx context.Context,key string) ([]string,error) {
+func(r *Rabbit) ConsumeMessages(ctx context.Context,key string) (chan string,error) {
+	resCh := make(chan string)
 	ch,err := r.rClient.Channel()
 
 	if err != nil {
@@ -124,25 +124,35 @@ func(r *Rabbit) ConsumeMessages(ctx context.Context,key string) ([]string,error)
 		return nil,fmt.Errorf("RabbitMQ error %w",err)
 	}
 
-		
-	res := make([]string,0,len(list))
+	go func () {
+		var first []byte
 
-	var first []byte
-	for msg := range list{
-		slog.Info("Take out exchange id from queue")
-		if bytes.Equal(first,msg.Body){
-			slog.Info("Close channel")
-			ch.Close()
-			return res,nil
+		for {
+			select{
+				case msg := <-list:
+					slog.Info("Take out exchange id from queue")
+					if bytes.Equal(first,msg.Body){
+						slog.Info("Close channel")
+						ch.Close()
+						close(resCh)
+						return 
+					}
+					if first == nil {
+						first = msg.Body 			
+					}
+					resCh <- string(msg.Body)
+					msg.Nack(false,true) 
+			
+				case <-ctx.Done():
+						slog.Info("Close channel with timeout")
+						close(resCh)
+						ch.Close()
+						return 
+			}
 		}
-		if first == nil {
-			first = msg.Body 			
-		}
-		res = append(res,string(msg.Body)) 
-		msg.Nack(false,true) 
-	}
+	}()
 
-	return res,nil
+	return resCh,nil
 }
 
 func(r *Rabbit) DeleteMessage(ctx context.Context,id []byte,key string) (error) {
